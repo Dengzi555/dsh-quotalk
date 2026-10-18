@@ -1,0 +1,66 @@
+{
+  "name": "dsh-quotalk",
+  "version": "0.1.1",
+  "description": "DeepSeek Harness 桌面端划词菜单：添加到对话，或在原生侧边栏中实时追问。",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "lib",
+    "locale",
+    "icon.svg",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "follow-up",
+    "quotalk"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-chat",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    },
+    "engines": {
+      "dsh": ">=0.2.0-rc.2"
+    }
+  },
+  "author": "Dengzi555",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dengzi555/dsh-quotalk.git"
+  },
+  "homepage": "https://github.com/Dengzi555/dsh-quotalk#readme",
+  "bugs": {
+    "url": "https://github.com/Dengzi555/dsh-quotalk/issues"
+  }
+}
