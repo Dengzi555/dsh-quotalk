@@ -49,12 +49,3 @@ function createSessionStore(ctx,sessionId,core) {
     dispose(){active=false;unsubscribe();bridge.dispose();listeners.clear();threads.clear();},
   };
 }
-
-function addQuoteToMain(ctx,selection) {
-  const binding=ctx.uiSession.adapter.current.getSnapshot();
-  if(binding?.props?.sessionId!==selection.sessionId)throw new Error('主对话已切换，请重新划词。');
-  const actions=binding.props.inputActions;
-  if(!actions?.insertText||!selection.insertion)throw new Error('当前 DSH 版本没有提供可用的输入框插入接口。');
-  const quote='\n\n'+selection.quote.split('\n').map(line=>'> '+line).join('\n')+'\n\n';
-  if(!actions.insertText(quote,selection.insertion))throw new Error('输入框内容已变化，请重新划词后添加。');
-}

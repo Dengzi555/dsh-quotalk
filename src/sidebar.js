@@ -4,7 +4,6 @@ function createComponents(React,menu,storeFor) {
   .qt-toolbar{position:fixed;z-index:2147483000;display:flex;align-items:center;max-width:calc(100vw - 16px);padding:4px;border:1px solid color-mix(in srgb,CanvasText 12%,transparent);border-radius:12px;background:Canvas;color:CanvasText;box-shadow:0 4px 18px #0002;font:13px/1.4 inherit;pointer-events:auto}
   .qt-toolbar button{border:0;background:transparent;color:inherit;padding:7px 9px;border-radius:8px;cursor:pointer;white-space:nowrap;font:inherit}
   .qt-toolbar button:hover,.qt-chip:hover{background:color-mix(in srgb,CanvasText 7%,transparent)}
-  .qt-toolbar button+button{border-left:1px solid color-mix(in srgb,CanvasText 12%,transparent);border-radius:0 8px 8px 0}
   .qt-toolbar-error{position:absolute;left:0;top:100%;padding:7px 10px;margin-top:5px;border:1px solid color-mix(in srgb,CanvasText 12%,transparent);border-radius:8px;background:Canvas;color:#c55;font-size:12px;max-width:300px}
   .qt-side{height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden;color:inherit;background:transparent;font:inherit;line-height:1.65}
   .qt-context{margin:12px 14px 0;padding:9px 12px;border-left:2px solid color-mix(in srgb,currentColor 28%,transparent);background:color-mix(in srgb,currentColor 4%,transparent);border-radius:0 8px 8px 0;flex-shrink:0}
@@ -30,7 +29,6 @@ function createComponents(React,menu,storeFor) {
     const state=React.useSyncExternalStore(menu.subscribe,menu.getSnapshot);
     if(!state.selection)return null;
     return h(React.Fragment,null,h('style',null,css),h('div',{'data-quotalk-ui':'toolbar',className:'qt-toolbar',role:'toolbar','aria-label':'所选文字操作',style:{left:state.selection.x,top:state.selection.y},onPointerDown:event=>event.preventDefault(),onKeyDown:event=>{event.stopPropagation();if(event.key==='Escape')menu.dismiss();}},
-      h('button',{type:'button',onClick:()=>menu.add()},'添加到对话'),
       h('button',{type:'button',onClick:()=>menu.open()},'在侧边聊天中提问'),
       state.error?h('div',{className:'qt-toolbar-error',role:'alert'},state.error):null));
   }

@@ -1,7 +1,7 @@
 {
   "name": "dsh-quotalk",
-  "version": "0.1.1",
-  "description": "DeepSeek Harness 桌面端划词菜单：添加到对话，或在原生侧边栏中实时追问。",
+  "version": "0.1.2",
+  "description": "DeepSeek Harness 桌面端划词追问，在原生侧边栏中结合上下文实时解释文字与代码。",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
@@ -21,7 +21,8 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser-selection.mjs"
   },
   "license": "MIT",
   "engines": {

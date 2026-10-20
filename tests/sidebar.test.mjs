@@ -8,8 +8,8 @@ const [bundle,selectionSource,storeSource,bridgeSource,coreSource,sidebarSource]
 const flush=async()=>{for(let i=0;i<30;i++)await Promise.resolve();};
 function events(){const handlers=new Map();return{handlers,addEventListener(type,fn){if(!handlers.has(type))handlers.set(type,new Set());handlers.get(type).add(fn);},removeEventListener(type,fn){handlers.get(type)?.delete(fn);},fire(type,event={}){for(const fn of handlers.get(type)||[])fn(event);}};}
 function harness(){
-  const document=events(),window=Object.assign(events(),{innerWidth:1000,innerHeight:700}),effects=[],slots=[],opens=[],inserts=[];
-  let binding={props:{sessionId:'s1',inputActions:{captureInsertion:()=>({revision:1}),insertText:(text,span)=>{inserts.push({text,span});return true;}}},hooks:{conversation:{getSnapshot:()=>({views:{get:()=>({legacy:{nodes:[{kind:'user',content:[{type:'text',text:'学 Python'}]},{kind:'assistant',blocks:[{kind:'text',text:'for 完整回答'}],requestConfig:{provider:'test',model:'chosen'}}]}})}})}}};
+  const document=events(),window=Object.assign(events(),{innerWidth:1000,innerHeight:700}),effects=[],slots=[],opens=[];
+  let binding={props:{sessionId:'s1'},hooks:{conversation:{getSnapshot:()=>({views:{get:()=>({legacy:{nodes:[{kind:'user',content:[{type:'text',text:'学 Python'}]},{kind:'assistant',blocks:[{kind:'text',text:'for 完整回答'}],requestConfig:{provider:'test',model:'chosen'}}]}})}})}}};
   const sourceEvents=new Set(),current={getSnapshot:()=>binding,subscribe(fn){sourceEvents.add(fn);return()=>sourceEvents.delete(fn);}};
   const element={innerText:'for 完整回答',closest:()=>null,isConnected:true},selection={toString:()=> 'for',rangeCount:1,anchorNode:{parentElement:element},getRangeAt:()=>({getBoundingClientRect:()=>({left:20,top:30,bottom:50,width:30,height:20})})};
   window.getSelection=()=>selection;
@@ -21,29 +21,46 @@ function harness(){
   const toolbar=()=>slots.find(s=>s.options.name==='shell.overlay').component();
   const sidebar=()=>slots.find(s=>s.options.name==='sidebar.right.pane.tab').component({sessionId:binding.props.sessionId});
   const flatten=node=>!node||typeof node!=='object'?[]:[node,...(node.children||[]).flatMap(flatten)];
-  return {document,window,slots,opens,inserts,element,selection,ctx,toolbar,sidebar,flatten,refs,capture(){document.fire('pointerup',{target:element});},setBinding(value){binding=value;for(const fn of sourceEvents)fn();},get binding(){return binding;},dispose(){for(const cleanup of effects.reverse())cleanup();}};
+  return {document,window,slots,opens,element,selection,ctx,toolbar,sidebar,flatten,refs,capture(){document.fire('pointerup',{target:element});},setBinding(value){binding=value;for(const fn of sourceEvents)fn();},get binding(){return binding;},dispose(){for(const cleanup of effects.reverse())cleanup();}};
 }
 test('selection toolbar opens a native side tab; there is no pet or floating chat',()=>{
   const h=harness();try{
     assert.equal(h.toolbar(),null);h.capture();const nodes=h.flatten(h.toolbar());
-    assert.deepEqual(nodes.filter(n=>n.type==='button').map(n=>n.children[0]),['添加到对话','在侧边聊天中提问']);
+    assert.deepEqual(nodes.filter(n=>n.type==='button').map(n=>n.children[0]),['在侧边聊天中提问']);
     nodes.find(n=>n.type==='button'&&n.children[0]==='在侧边聊天中提问').props.onClick();
     assert.deepEqual(h.opens,['quotalk']);assert.equal(h.toolbar(),null);
     const side=h.flatten(h.sidebar());assert.equal(side.find(n=>n.type==='summary').children[0],'for');
     assert.ok(side.some(n=>n.type==='textarea'));assert.ok(!side.some(n=>n.type==='video'));
   }finally{h.dispose();}
 });
-test('adding a quote uses revision-guarded insertion and does not submit or replace the draft',()=>{
+test('selection and sidebar opening never access the main composer write API',()=>{
+  const h=harness();let accessed=0;
+  Object.defineProperty(h.binding.props,'inputActions',{get(){accessed++;return {};}});
+  try{h.capture();h.flatten(h.toolbar()).find(n=>n.type==='button').props.onClick();assert.equal(accessed,0);assert.deepEqual(h.opens,['quotalk']);}finally{h.dispose();}
+});
+test('inherited editable selection is excluded when mouseup or keyup lands outside it',()=>{
   const h=harness();try{
-    h.capture();h.flatten(h.toolbar()).find(n=>n.type==='button'&&n.children[0]==='添加到对话').props.onClick();
-    assert.equal(h.inserts[0].text,'\n\n> for\n\n');assert.equal(h.inserts[0].span.revision,1);assert.equal(h.opens.length,0);
+    const editor={isContentEditable:true,closest:()=>null};
+    for(const type of ['pointerup','keyup']){
+      h.selection.anchorNode={parentElement:h.element};h.capture();assert.ok(h.toolbar());
+      h.selection.anchorNode={nodeType:3,parentElement:editor};
+      h.document.fire(type,{target:h.element});assert.equal(h.toolbar(),null);
+    }
   }finally{h.dispose();}
 });
-test('stale main-draft insertion produces a visible error without discarding the quote',()=>{
+test('ranges ending in an editor and selectionchange hide the menu without intercepting input events',()=>{
+  const h=harness();let prevented=false,stopped=false;try{
+    h.capture();h.selection.focusNode={nodeType:3,parentElement:{isContentEditable:true,closest:()=>null}};
+    h.document.fire('keyup',{target:h.element,preventDefault(){prevented=true;},stopPropagation(){stopped=true;}});
+    assert.equal(h.toolbar(),null);assert.equal(prevented,false);assert.equal(stopped,false);
+    delete h.selection.focusNode;h.capture();h.selection.anchorNode={nodeType:3,parentElement:{isContentEditable:true,closest:()=>null}};
+    h.document.fire('selectionchange');assert.equal(h.toolbar(),null);
+  }finally{h.dispose();}
+});
+test('input target clears an existing answer menu even while the old answer range remains',()=>{
   const h=harness();try{
-    h.binding.props.inputActions.insertText=()=>false;h.capture();
-    h.flatten(h.toolbar()).find(n=>n.type==='button'&&n.children[0]==='添加到对话').props.onClick();
-    assert.ok(h.flatten(h.toolbar()).some(n=>n.props.role==='alert'&&n.children[0].includes('输入框内容已变化')));
+    h.capture();const input={closest:selector=>selector.includes('textarea')?input:null};
+    h.document.fire('pointerup',{target:input});assert.equal(h.toolbar(),null);
   }finally{h.dispose();}
 });
 test('escape, scroll and switching Sessions dismiss the selection menu; disposal removes handlers',()=>{

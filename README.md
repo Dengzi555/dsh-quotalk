@@ -1,14 +1,14 @@
 # dsh-quotalk
 
-为 DeepSeek Harness Desktop 增加划词菜单：**添加到对话 / 在侧边聊天中提问**。
+为 DeepSeek Harness Desktop 增加划词追问：选中回答里的文字或代码，点击 **在侧边聊天中提问**。
 
-选中文字后，菜单出现在选区旁边。需要在原对话里继续聊，就把引用添加到主输入框；需要单独解释或举例，就在 DSH 原生右侧页签里追问。主回答继续留在眼前。
+选中阅读区域里的文字后，追问按钮出现在选区旁边。解释、举例和连续追问都在 DSH 原生右侧页签里进行，主回答继续留在眼前。
 
 交互参考 Codex 的划词工具，使用 DSH 的公开插件接口独立实现，没有使用 Codex 内部组件。本版从 [deepseek-quotalk](https://github.com/Dengzi555/deepseek-quotalk) 的上下文处理代码适配，原网页版项目保持不变。
 
 ## 当前功能
 
-- **添加到对话**：以引用格式插入主输入框，不自动发送，不替换原有草稿或引用芯片。输入框发生变化时会拒绝过期插入，提示重新划词。
+- **输入框保持原生行为**：主输入框和侧边输入框中的框选、复制、编辑不显示插件追问菜单。
 - **在侧边聊天中提问**：打开原生右侧“追问”页签，引用上方折叠显示，直接输入问题或点击“解释一下 / 举个例子”。
 - **流式回复**：直接调用 Harness 的模型服务，不新开 DeepSeek 网页，不切换窗口。收到模型完成标记后立即结束回答状态。
 - **上下文范围**：仅当前回答、最近 2 轮、最近 4 轮、当前会话已加载的全部对话。过长内容会截取。
@@ -32,7 +32,7 @@ dsh plugin --profile desktop add github:Dengzi555/dsh-quotalk
 
 ## 从本地目录安装
 
-适配基准：官方 DeepSeek Harness `dsh-v0.2.0-rc.2`，与你本机运行时的版本一致。已按该版本的右侧页签、输入框插入、会话快照和 LLM 流接口核对实现。
+适配基准：官方 DeepSeek Harness `dsh-v0.2.0-rc.2`，与你本机运行时的版本一致。已按该版本的右侧页签、会话快照和 LLM 流接口核对实现。
 
 1. 将整个 `dsh-quotalk` 文件夹放到固定位置。根目录应包含 `package.json`、`cordis.patch.yml`、`lib/` 等。
 2. 在 DSH Desktop 的插件管理中安装这个**本地插件包目录**。如果桌面发行版提供“本地目录/本地包来源”入口，选择或填写本文件夹的绝对路径。不同发行版的入口可能不同。
@@ -54,7 +54,7 @@ dsh plugin --profile desktop add github:Dengzi555/dsh-quotalk
 
 只读取当前 DSH 会话中已加载的用户文字和助手文字，不读取其他会话、整个工作区、文件内容、工具结果或模型思考。未加载的历史不属于“全部”。若会话结构无法识别，只保留选中段落，不假装关联了完整对话。
 
-所选引用、上下文和侧边问答会随请求发送给你在 DSH 中选择的模型提供方。插件自己不读取密钥，不提供工具，不执行命令，不向主对话追加消息；“添加到对话”仅按用户点击插入草稿。
+所选引用、上下文和侧边问答会随请求发送给你在 DSH 中选择的模型提供方。插件自己不读取密钥，不提供工具，不执行命令，不向主对话追加消息，不会读取或改写主输入框草稿。
 
 追问历史保存在插件内存中，关闭侧边页签后重新划词可恢复本次运行的内容；刷新或重启后清空。切换主会话会停止旧会话正在进行的插件请求，避免把新主会话上下文混入旧追问。
 
@@ -69,9 +69,11 @@ npm run build
 npm test
 ```
 
+可选真实浏览器回归：`npm run test:browser`。它使用隔离的无头 Edge 页面验证选区行为，不操作 DSH 窗口或个人浏览器资料；可通过 `BROWSER_PATH` 指定其他 Chromium 浏览器。
+
 - `src/selection.js`：选区菜单与监听清理。
 - `src/sidebar.js`：紧凑的原生右侧页签内容。
-- `src/store.js`：每个会话、每条引用的追问隔离，以及主输入框插入。
+- `src/store.js`：每个会话、每条引用的追问隔离。
 - `src/bridge.js`：公开会话快照、模型选择与流式客户端。
 - `src/core.js`：原项目复用的上下文长度限制与追问提示组装。
 - `lib/index.js`：Host 插件，调用 `ctx.llm.stream`，处理取消与流式完成。
@@ -79,7 +81,9 @@ npm test
 
 React 由 DSH 提供。包中没有浏览器 manifest、动画视频、安装 ZIP、node_modules 或原网页版安装截图。
 
-21 项自动测试覆盖了官方接口形状的样例、模拟划词与 React 元素、上下文、模型选择、流式结束、引用插入和错误。用户已在本机 DSH Desktop 安装，并确认可以使用。此反馈与自动测试不代表已覆盖所有桌面发行版及模型；不同版本的插件 API 变化可能需要进一步适配。
+23 项自动测试覆盖了官方接口形状的样例、模拟划词与 React 元素、上下文、模型选择、流式结束、输入框选区排除和错误。用户已在本机 DSH Desktop 安装，并确认可以使用。此反馈与自动测试不代表已覆盖所有桌面发行版及模型；不同版本的插件 API 变化可能需要进一步适配。
+
+真实 Edge DOM 的 10 个回归场景覆盖了普通回答、嵌套输入框、各种 contenteditable 写法、键盘选区、旧菜单清除和跨编辑区选区。
 
 若没有划词菜单，先检查包与插件是否已启用、Host/Client 激活是否报错及 DSH 版本。若侧边栏不回答，先确认主对话使用同一模型可以正常回答。
 
@@ -87,4 +91,4 @@ React 由 DSH 提供。包中没有浏览器 manifest、动画视频、安装 ZI
 
 代码与文档采用 [MIT License](LICENSE)，来源说明见 [NOTICE.md](NOTICE.md)。
 
-官方接口参考：[DeepSeek Harness RC.2](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.2.0-rc.2)、[右侧页签注册接口](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.0-rc.2/packages/client/ui-sidebar-right/src/client/tab-registry.ts)、[输入框插入接口](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.0-rc.2/packages/client/ui-conversation/src/client/contract/input.ts)、[LLM 流接口](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.0-rc.2/packages/llm/llm/src/types.ts)。
+官方接口参考：[DeepSeek Harness RC.2](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.2.0-rc.2)、[右侧页签注册接口](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.0-rc.2/packages/client/ui-sidebar-right/src/client/tab-registry.ts)、[LLM 流接口](https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.2.0-rc.2/packages/llm/llm/src/types.ts)。
