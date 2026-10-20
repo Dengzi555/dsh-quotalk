@@ -63,5 +63,9 @@
   "homepage": "https://github.com/Dengzi555/dsh-quotalk#readme",
   "bugs": {
     "url": "https://github.com/Dengzi555/dsh-quotalk/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }
